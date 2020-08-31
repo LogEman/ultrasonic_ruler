@@ -35,7 +35,7 @@ byte pin_column[COLUMN_NUM] = {15, 14, 6, 7}; //connect to the column pinouts of
 
 Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
 //Defines the pin for the buzzer
-const int buzzPin = 8;
+const int buzzPin = 13;
 
 //Defines the key for the mode button
 const char modeKey = 'D';
@@ -268,6 +268,7 @@ if(key != NO_KEY && key != '#' && key!= '*' && key!= 'A' && key!= 'B' && key!= '
 
 if(finalInput != "EMPTY"){
   if(distance < finalInput.toInt()){
+    digitalWrite(buzzPin, HIGH);
     resetDistance();
     lcd.print("DBM: ");
     lcd.print(finalInput.toInt() - distance);
@@ -275,8 +276,7 @@ if(finalInput != "EMPTY"){
     delay(1500);
     resetDistance();
     lcd.print("GET BACK!");
-    digitalWrite(buzzPin, HIGH);
-  }else{
+  }else if(distance > finalInput.toInt()){
     resetDistance();
     //DFM = Distance from minimium
     lcd.print("DFM: ");
