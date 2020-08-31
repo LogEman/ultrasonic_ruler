@@ -17,7 +17,8 @@
 //Defines the layout of keypad
 
 String currentInput;
-String currentPassword = "1234";
+String finalInput;
+char key;
 
 const int ROW_NUM = 4; //four rows
 const int COLUMN_NUM = 4; //four columns
@@ -29,16 +30,19 @@ char keys[ROW_NUM][COLUMN_NUM] = {
   {'*','0','#', 'D'}
 };
 
-byte pin_rows[ROW_NUM] = {A5, A4, A3, A2}; //connect to the row pinouts of the keypad
-byte pin_column[COLUMN_NUM] = {A1, A0, 6, 7}; //connect to the column pinouts of the keypad
+byte pin_rows[ROW_NUM] = {19, 18, 17, 16}; //connect to the row pinouts of the keypad
+byte pin_column[COLUMN_NUM] = {15, 14, 6, 7}; //connect to the column pinouts of the keypad
 
 Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
+//Defines the pin for the buzzer
+const int buzzPin = 8;
 
-//Defines the pin for the mode button
-const int modePin = 8;
-
+//Defines the key for the mode button
+const char modeKey = 'D';
+//Defines the new function key 
+const char newFunctionKey = 'C';
 //Defines the maximium mode integer
-const int maxMode = 2;
+const int maxMode = 3;
 
 //Reference to the mode of the device
 int currentMode;
@@ -46,6 +50,8 @@ int currentMode;
 //References to measured distance booleans
 bool distanceMeasured1;
 bool distanceMeasured2;
+//Reference to custom function program boolean
+bool doNewFunction;
 
 //References to measurements
 int distance1;
@@ -67,6 +73,9 @@ bool buttonPressed;
 //Reference to distance loop
 void distanceLoop();
 
+//Reference to custom function
+void customFunction();
+
 //Reference to resetDistance
 void resetDistance();
 
@@ -79,6 +88,9 @@ int distance; // variable for the distance measurement
 
 void setup() {
   //Sets up all the variables by setting them to a default value
+  doNewFunction = false;
+  currentInput = "EMPTY";
+  finalInput = "EMPTY";
   distance = 0;
   distanceMeasured1 = false;
   distanceMeasured2 = false;
@@ -86,10 +98,10 @@ void setup() {
   distance2 = 0;
   //currentTime = 0;
   //previousTime = 0;
-  //passedTime = 0;
+  //passedTime = 0;K
   currentMode = 1;
   pinMode(13, OUTPUT);
-  pinMode(modePin, INPUT_PULLUP);
+  pinMode(buzzPin, OUTPUT);
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an OUTPUT
   pinMode(echoPin, INPUT); // Sets the echoPin as an INPUT
   Serial.begin(9600); // // Serial Communication is starting with 9600 of baudrate speed
@@ -97,11 +109,15 @@ void setup() {
   Serial.println("with Arduino UNO R3");
 
    // set up the LCD's number of columns and rows: 
-  lcd.begin(16, 2);
-  lcd.setCursor(0, 2);
-  lcd.print("Arduino ultrasonic distance sensor");
+  //lcd.begin(16, 2);
+  //lcd.setCursor(0, 2);
+  //lcd.print("Arduino ultrasonic distance sensor");
 }
 void loop() {
+  key = keypad.getKey();
+  if(key != NO_KEY){
+  Serial.println(key);
+  }
   delay(500);
   //currentTime = millis();
   //Cycles through the modes of the ruler
@@ -110,7 +126,7 @@ void loop() {
   }else{
     digitalWrite(13, LOW);
   }
-  if(digitalRead(modePin) == LOW && buttonPressed == false){
+  if(key == modeKey && buttonPressed == false){
     if(currentMode < maxMode)
     {
       buttonPressed = true;
@@ -165,9 +181,9 @@ void distanceLoop(){
   abs(distance);
   // Displays the distance on the Serial Monitor
   if(currentMode == 1){
-  Serial.print("Distance: ");
-  Serial.print(distance);
-  Serial.println("cm");
+  //Serial.print("Distance: ");
+  //Serial.print(distance);
+  //Serial.println("cm");
 
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
@@ -204,6 +220,8 @@ void distanceLoop(){
     distanceMeasured2 = false; 
   }
  //}
+  }else if(currentMode == 3){
+    customFunction();
   }
 }
 
@@ -211,4 +229,60 @@ void resetDistance(){
   lcd.setCursor(0, 0);
   lcd.print("                ");
   lcd.setCursor(0, 0);
+}
+
+void customFunction(){
+if(currentInput == "EMPTY" && finalInput == "EMPTY"){
+  resetDistance();
+  lcd.print("Function Mode");
+}
+
+  if(key == 'C'){
+    doNewFunction = true;
+    finalInput = "EMPTY";  
+  }
+if(doNewFunction == true && currentInput != "EMPTY"){
+  resetDistance();
+  lcd.print("CI: ");
+  lcd.print(currentInput);
+  lcd.print("CMs");
+}
+Serial.print("doNewFunction: ");
+Serial.println(doNewFunction);
+Serial.print("currentInput: ");
+Serial.println(currentInput);
+Serial.print("finalInput: ");
+Serial.println(finalInput);
+if(key != NO_KEY && key != '#' && key!= '*' && key!= 'A' && key!= 'B' && key!= 'C' && key!= 'D' && doNewFunction == true){
+  if(currentInput == "EMPTY"){
+    currentInput = "";
+  }
+  currentInput += key;
+}else if(key == '#' && doNewFunction == true){
+  finalInput = currentInput;
+  currentInput = "EMPTY";
+  doNewFunction = false;
+}else if(key == '*'){
+  currentInput = "EMPTY";
+}
+
+if(finalInput != "EMPTY"){
+  if(distance < finalInput.toInt()){
+    resetDistance();
+    lcd.print("DBM: ");
+    lcd.print(finalInput.toInt() - distance);
+    lcd.print(" CMs");
+    delay(1500);
+    resetDistance();
+    lcd.print("GET BACK!");
+    digitalWrite(buzzPin, HIGH);
+  }else{
+    resetDistance();
+    //DFM = Distance from minimium
+    lcd.print("DFM: ");
+    lcd.print(distance - finalInput.toInt());
+    lcd.print(" CMs");
+    digitalWrite(buzzPin, LOW);
+    }
+  }
 }
